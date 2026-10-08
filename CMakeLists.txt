@@ -20,7 +20,7 @@ set(dependencies
     yolo_ros_interfaces
 )
 
-add_executable(person_tracker src/main.cpp)
+add_executable(person_tracker src/person_tracker.cpp)
 ament_target_dependencies(person_tracker ${dependencies})
 
 
