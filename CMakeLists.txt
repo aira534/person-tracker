@@ -11,6 +11,8 @@ find_package(rclcpp_lifecycle REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(yolo_ros REQUIRED)
 find_package(yolo_ros_interfaces REQUIRED)
+find_package(vision_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 set(dependencies
     rclcpp
@@ -18,6 +20,8 @@ set(dependencies
     rclcpp_lifecycle
     yolo_ros
     yolo_ros_interfaces
+    vision_msgs
+    sensor_msgs
 )
 
 add_executable(person_tracker src/person_tracker.cpp)
