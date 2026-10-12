@@ -9,23 +9,22 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(yolo_ros REQUIRED)
-find_package(yolo_ros_interfaces REQUIRED)
+find_package(yolo_msgs REQUIRED)
 find_package(vision_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 set(dependencies
     rclcpp
     std_msgs
     rclcpp_lifecycle
-    yolo_ros
-    yolo_ros_interfaces
+    yolo_msgs
     vision_msgs
     sensor_msgs
+    tf2
+    tf2_ros
 )
-
-add_executable(person_tracker src/person_tracker.cpp)
-ament_target_dependencies(person_tracker ${dependencies})
 
 
 # Using classes
@@ -35,50 +34,17 @@ ament_target_dependencies(person_tracker ${dependencies})
 # Using a library
 include_directories(include)
 add_library(${PROJECT_NAME} SHARED
-  src/node_programming/PublisherNode.cpp
-  src/node_programming/LifeCyclePublisherNode.cpp
-  src/node_programming/SubscriberNode.cpp
+  src/person_tracker/PersonTrackerNode.cpp
 )
 ament_target_dependencies(${PROJECT_NAME} ${dependencies})
 
-add_executable(publisher_class src/publisher_class.cpp)
-ament_target_dependencies(publisher_class ${dependencies})
-target_link_libraries(publisher_class ${PROJECT_NAME})
-
-add_executable(subscriber_class src/subscriber_class.cpp)
-ament_target_dependencies(subscriber_class ${dependencies})
-target_link_libraries(subscriber_class ${PROJECT_NAME})
-
-add_executable(pub_sub_st src/pub_sub_st.cpp)
-ament_target_dependencies(pub_sub_st ${dependencies})
-target_link_libraries(pub_sub_st ${PROJECT_NAME})
-
-add_executable(pub_sub_mt src/pub_sub_mt.cpp)
-ament_target_dependencies(pub_sub_mt ${dependencies})
-target_link_libraries(pub_sub_mt ${PROJECT_NAME})
-
-add_executable(pub_sub_sst src/pub_sub_sst.cpp)
-ament_target_dependencies(pub_sub_sst ${dependencies})
-target_link_libraries(pub_sub_sst ${PROJECT_NAME})
-
-add_executable(lifecycle_publisher_class src/lifecycle_publisher_class.cpp)
-ament_target_dependencies(lifecycle_publisher_class ${dependencies})
-target_link_libraries(lifecycle_publisher_class ${PROJECT_NAME})
+add_executable(person_tracker_main src/person_tracker_main.cpp)
+ament_target_dependencies(person_tracker_main ${dependencies})
+target_link_libraries(person_tracker_main ${PROJECT_NAME})
 
 install(TARGETS
-  simple
-  logger
-  publisher
-  subscriber
-  logger_class
-  publisher_class
-  subscriber_class
-  pub_sub_st
-  pub_sub_mt
-  pub_sub_sst
-  lifecycle_publisher_class
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
+  ${PROJECT_NAME}
+  person_tracker_main
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
