@@ -35,6 +35,7 @@ set(dependencies
 include_directories(include)
 add_library(${PROJECT_NAME} SHARED
   src/person_tracker/PersonTrackerNode.cpp
+  src/person_tracker/ObjectProcessingNode.cpp
 )
 ament_target_dependencies(${PROJECT_NAME} ${dependencies})
 
@@ -42,9 +43,14 @@ add_executable(person_tracker_main src/person_tracker_main.cpp)
 ament_target_dependencies(person_tracker_main ${dependencies})
 target_link_libraries(person_tracker_main ${PROJECT_NAME})
 
+add_executable(object_processing_main src/object_processing_main.cpp)
+ament_target_dependencies(object_processing_main ${dependencies})
+target_link_libraries(object_processing_main ${PROJECT_NAME})
+
 install(TARGETS
   ${PROJECT_NAME}
   person_tracker_main
+  object_processing_main
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
