@@ -14,6 +14,7 @@ find_package(vision_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(laser_geometry REQUIRED)
 
 set(dependencies
     rclcpp
@@ -24,8 +25,12 @@ set(dependencies
     sensor_msgs
     tf2
     tf2_ros
+    laser_geometry
 )
 
+install(DIRECTORY config launch
+  DESTINATION share/${PROJECT_NAME}
+)
 
 # Using classes
 # add_executable(logger_class src/logger_class.cpp)
