@@ -19,4 +19,6 @@ def generate_launch_description():
         output='screen'
     )
 
-    return LaunchDescription([object_processing_node])
+    return LaunchDescription([
+      object_processing_node,
+  ])
