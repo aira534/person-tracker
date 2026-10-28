@@ -48,6 +48,8 @@ private:
   };
 
   std::vector<Entity> entities_;
+  int new_id;
+  int max_misses_;
 };
 
 }  //  namespace person_tracker

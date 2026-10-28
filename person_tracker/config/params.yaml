@@ -7,3 +7,4 @@ object_processing_node:
 detections_tracking_node:
   ros__parameters:
     fixed_frame: odom
+    max_misses: 10

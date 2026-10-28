@@ -7,7 +7,8 @@ namespace person_tracker {
 LidarTrackerNode::LidarTrackerNode()
 : Node("detections_tracking_node"),
   tf_buffer_(),
-  tf_listener_(tf_buffer_)
+  tf_listener_(tf_buffer_),
+  new_id(0)
 {
   centers_subscriber_ = create_subscription<geometry_msgs::msg::PoseArray>(
       "/lidar_objects", 10,
@@ -17,6 +18,9 @@ LidarTrackerNode::LidarTrackerNode()
   this->declare_parameter<std::string>("fixed_frame", "odom");
 
   fixed_frame_ = this->get_parameter("fixed_frame").as_string();
+
+  this->declare_parameter<int>("max_misses", 10);
+  max_misses_ = this->get_parameter("max_misses").as_int();
   // debug_pub_ = create_publisher<geometry_msgs::msg::PoseArray>(
   //   "/objects_odom_debug", 10);
 }
@@ -78,6 +82,15 @@ LidarTrackerNode::centers_callback(geometry_msgs::msg::PoseArray::SharedPtr msg)
 
 void LidarTrackerNode::updateEntities(const rclcpp::Time & stamp)
 {
+  // to not update with older detections
+  for (const Entity & entity : entities_)
+  {
+    if (stamp < entity.last_seen)
+    {
+      return;
+    }
+  }
+
   std::vector<bool> detection_associated(points_odom_.size(), false);
 
   for (Entity & entity: entities_) {
@@ -93,10 +106,10 @@ void LidarTrackerNode::updateEntities(const rclcpp::Time & stamp)
       if (!detection_associated[i]) {
         double dist_x = pred_x - points_odom_[i].x;
         double dist_y = pred_y - points_odom_[i].y;
-        double dist = sqrt(dist_x * dist_x + dist_y * dist_y);
+        double dist_sq = dist_x * dist_x + dist_y * dist_y;
 
-        if (dist < best_dist) {
-          best_dist = dist;
+        if (dist_sq < best_dist) {
+          best_dist = dist_sq;
           best_index = i;
         }
       }
@@ -104,25 +117,35 @@ void LidarTrackerNode::updateEntities(const rclcpp::Time & stamp)
 
     if (best_index != points_odom_.size()) {
       // update vectors with new info
-      entity.vx = (points_odom_[best_index].x - entity.position.x) / dt;
-      entity.vy = (points_odom_[best_index].y - entity.position.y) / dt;
+
+      if (dt > 0) {
+        entity.vx = (points_odom_[best_index].x - entity.position.x) / dt;
+        entity.vy = (points_odom_[best_index].y - entity.position.y) / dt;
+      }
 
       entity.last_seen = stamp;
 
       entity.position = points_odom_[best_index];
+      entity.misses = 0;
       detection_associated[best_index] = true;
     } else {
       entity.misses++;
     }
+  }
 
-    for (std::size_t i = 0; i < detection_associated.size(); i++) {
-      if (!detection_associated[i]) {
-        /* continuar generar nueva entidad*/
-        void();
-      }
+  for (std::size_t i = 0; i < detection_associated.size(); i++) {
+    if (!detection_associated[i]) {
+      Entity new_entity;
+      new_entity.id = ++new_id;
+      new_entity.last_seen = stamp;
+      new_entity.misses = 0;
+      new_entity.position = points_odom_[i];
+      new_entity.vx = 0.0;
+      new_entity.vy = 0.0;
 
-    
+      entities_.push_back(new_entity);
     }
+  
   }
 }
 }
