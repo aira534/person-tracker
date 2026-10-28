@@ -18,6 +18,10 @@ ObjectProcessingNode::ObjectProcessingNode()
   this->declare_parameter<double>("max_dist", 0.50);
   this->declare_parameter<double>("min_obj_size", 0.05);
   this->declare_parameter<double>("max_obj_size", 1.00);
+
+  MAX_DIST_ = this->get_parameter("max_dist").as_double();
+  MIN_OBJ_SIZE_ = this->get_parameter("min_obj_size").as_double();
+  MAX_OBJ_SIZE_ = this->get_parameter("max_obj_size").as_double();
 }
 
 void
@@ -32,10 +36,6 @@ ObjectProcessingNode::laser_callback(sensor_msgs::msg::LaserScan::SharedPtr msg)
   objects_pos.header = point_cloud.header;
 
   std::vector<geometry_msgs::msg::Point> current_object;
-
-  float MAX_DIST = this->get_parameter("max_dist").as_double();
-  float MIN_OBJ_SIZE = this->get_parameter("min_obj_size").as_double();
-  float MAX_OBJ_SIZE = this->get_parameter("max_obj_size").as_double();
 
   sensor_msgs::PointCloud2ConstIterator<float> iter_x(point_cloud, "x");
   sensor_msgs::PointCloud2ConstIterator<float> iter_y(point_cloud, "y");
@@ -57,21 +57,15 @@ ObjectProcessingNode::laser_callback(sensor_msgs::msg::LaserScan::SharedPtr msg)
         continue;
     }
 
-    // filter detections a certain distance from the robot
-    float dist_from_robot = std::sqrt((current_point.x * current_point.x) + (current_point.y * current_point.y));
-    if (dist_from_robot > 5.0) { 
-        continue; 
-    }
-
     if (has_prev_point) {
       float dist_x = current_point.x - prev_point.x;
       float dist_y = current_point.y - prev_point.y;
       float dist_to_prev = std::sqrt((dist_x * dist_x) + (dist_y * dist_y)); 
 
       // if they are further away from each other then its another object
-      if (dist_to_prev > MAX_DIST) {
+      if (dist_to_prev > MAX_DIST_) {
         // calculate center of the object
-        calc_object_center(current_object, objects_pos, MIN_OBJ_SIZE, MAX_OBJ_SIZE);
+        calc_object_center(current_object, objects_pos, MIN_OBJ_SIZE_, MAX_OBJ_SIZE_);
         current_object.clear();
       }
     }
@@ -81,7 +75,7 @@ ObjectProcessingNode::laser_callback(sensor_msgs::msg::LaserScan::SharedPtr msg)
     has_prev_point = true;
   }
 
-  calc_object_center(current_object, objects_pos, MIN_OBJ_SIZE, MAX_OBJ_SIZE);
+  calc_object_center(current_object, objects_pos, MIN_OBJ_SIZE_, MAX_OBJ_SIZE_);
   objects_pub_->publish(objects_pos);
 }
 

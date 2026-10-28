@@ -3,3 +3,7 @@ object_processing_node:
     max_dist: 0.50
     min_obj_size: 0.05
     max_obj_size: 1.00
+
+detections_tracking_node:
+  ros__parameters:
+    fixed_frame: odom

@@ -16,6 +16,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(laser_geometry REQUIRED)
 find_package(person_tracker_interfaces REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 set(dependencies
     rclcpp
@@ -26,6 +27,7 @@ set(dependencies
     sensor_msgs
     tf2
     tf2_ros
+    tf2_geometry_msgs
     laser_geometry
     person_tracker_interfaces
 )

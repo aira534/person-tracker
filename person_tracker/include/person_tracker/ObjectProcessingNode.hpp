@@ -26,6 +26,10 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_subscriber_;
   rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr objects_pub_;
   laser_geometry::LaserProjection laser_projector_;
+
+  float MAX_DIST_;
+  float MIN_OBJ_SIZE_;
+  float MAX_OBJ_SIZE_;
 };
 
 }  //  namespace person_tracker

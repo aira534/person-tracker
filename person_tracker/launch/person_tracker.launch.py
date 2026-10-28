@@ -19,6 +19,15 @@ def generate_launch_description():
         output='screen'
     )
 
+    lidar_tracker_node = Node(
+        package='person_tracker',
+        executable='lidar_tracker_main',
+        name='detections_tracking_node',
+        parameters=[config_file],
+        output='screen'
+    )
+
     return LaunchDescription([
       object_processing_node,
+      lidar_tracker_node
   ])
