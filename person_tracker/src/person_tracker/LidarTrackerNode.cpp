@@ -145,7 +145,18 @@ void LidarTrackerNode::updateEntities(const rclcpp::Time & stamp)
 
       entities_.push_back(new_entity);
     }
-  
+  }
+
+  for (auto it = entities_.begin(); it != entities_.end(); )
+  {
+    if (it->misses >= max_misses_)
+    {
+      it = entities_.erase(it);
+    }
+    else
+    {
+      ++it;
+    }
   }
 }
 }
