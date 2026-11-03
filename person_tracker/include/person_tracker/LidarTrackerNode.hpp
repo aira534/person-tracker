@@ -10,6 +10,8 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2/transform_datatypes.h"
 #include <vector>
+#include "visualization_msgs/msg/marker.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -30,7 +32,7 @@ private:
   tf2_ros::TransformListener tf_listener_;
   std::string fixed_frame_;
   std::vector<geometry_msgs::msg::Point> points_odom_;
-  // rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr debug_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr debug_pub_;
 
   // for every entity that is detected by the lidar
   struct Entity
@@ -50,6 +52,11 @@ private:
   std::vector<Entity> entities_;
   int new_id;
   int max_misses_;
+
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
+    entities_markers_pub_;
+
+  void publishEntities(const rclcpp::Time & stamp);
 };
 
 }  //  namespace person_tracker

@@ -17,6 +17,7 @@ find_package(tf2_ros REQUIRED)
 find_package(laser_geometry REQUIRED)
 find_package(person_tracker_interfaces REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 set(dependencies
     rclcpp
@@ -30,6 +31,7 @@ set(dependencies
     tf2_geometry_msgs
     laser_geometry
     person_tracker_interfaces
+    visualization_msgs
 )
 
 install(DIRECTORY config launch

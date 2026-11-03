@@ -1,5 +1,8 @@
 #include "person_tracker/LidarTrackerNode.hpp"
 
+#include <cstdint>
+#include <string>
+
 using std::placeholders::_1;
 
 namespace person_tracker {
@@ -23,6 +26,10 @@ LidarTrackerNode::LidarTrackerNode()
   max_misses_ = this->get_parameter("max_misses").as_int();
   // debug_pub_ = create_publisher<geometry_msgs::msg::PoseArray>(
   //   "/objects_odom_debug", 10);
+
+  entities_markers_pub_ =
+    this->create_publisher<visualization_msgs::msg::MarkerArray>(
+      "tracked_entities_markers", 10);
 }
 
 void
@@ -82,23 +89,20 @@ LidarTrackerNode::centers_callback(geometry_msgs::msg::PoseArray::SharedPtr msg)
 
 void LidarTrackerNode::updateEntities(const rclcpp::Time & stamp)
 {
-  // to not update with older detections
-  for (const Entity & entity : entities_)
-  {
-    if (stamp < entity.last_seen)
-    {
-      return;
-    }
-  }
-
   std::vector<bool> detection_associated(points_odom_.size(), false);
 
   for (Entity & entity: entities_) {
     double dt = (stamp - entity.last_seen).seconds();
-    double pred_x = entity.position.x + entity.vx * dt;
-    double pred_y = entity.position.y + entity.vy * dt;
+    double pred_x = entity.position.x;
+    double pred_y = entity.position.y;
 
-    double margin = 0.25;
+    // Solo proyectar si la vimos en el frame anterior (misses == 0)
+    if (entity.misses == 0 && dt > 0.0 && dt < 0.4) {
+      pred_x += entity.vx * dt;
+      pred_y += entity.vy * dt;
+    }
+
+    double margin = 0.6;
     double best_dist = margin * margin;
     std::size_t best_index = points_odom_.size();
 
@@ -130,6 +134,8 @@ void LidarTrackerNode::updateEntities(const rclcpp::Time & stamp)
       detection_associated[best_index] = true;
     } else {
       entity.misses++;
+      entity.vx = 0.0;
+      entity.vy = 0.0;
     }
   }
 
@@ -158,5 +164,78 @@ void LidarTrackerNode::updateEntities(const rclcpp::Time & stamp)
       ++it;
     }
   }
+  publishEntities(stamp);
+}
+
+//debug
+
+void LidarTrackerNode::publishEntities(const rclcpp::Time & stamp)
+{
+  using Marker = visualization_msgs::msg::Marker;
+
+  visualization_msgs::msg::MarkerArray markers;
+  markers.markers.reserve(1 + 2 * entities_.size());
+
+  // Limpiar la visualización anterior.
+  Marker clear;
+  clear.header.frame_id = "odom";
+  clear.header.stamp = stamp;
+  clear.action = Marker::DELETEALL;
+  markers.markers.push_back(clear);
+
+  for (const Entity & entity : entities_)
+  {
+    // Esfera en la posición del cluster.
+    Marker sphere;
+    sphere.header.frame_id = "odom";
+    sphere.header.stamp = stamp;
+
+    sphere.ns = "entity_positions";
+    sphere.id = static_cast<std::int32_t>(entity.id);
+    sphere.type = Marker::SPHERE;
+    sphere.action = Marker::ADD;
+
+    sphere.pose.position = entity.position;
+    sphere.pose.orientation.w = 1.0;
+
+    sphere.scale.x = 0.12;
+    sphere.scale.y = 0.12;
+    sphere.scale.z = 0.12;
+
+    // Verde: asociada en este escaneo.
+    // Naranja: conservada, pero con detecciones perdidas.
+    sphere.color.r = entity.misses == 0 ? 0.1f : 1.0f;
+    sphere.color.g = entity.misses == 0 ? 1.0f : 0.5f;
+    sphere.color.b = 0.1f;
+    sphere.color.a = 1.0f;
+
+    markers.markers.push_back(sphere);
+
+    // Texto encima de la esfera.
+    Marker text;
+    text.header = sphere.header;
+
+    text.ns = "entity_ids";
+    text.id = static_cast<std::int32_t>(entity.id);
+    text.type = Marker::TEXT_VIEW_FACING;
+    text.action = Marker::ADD;
+
+    text.pose = sphere.pose;
+    text.pose.position.x += 0.10;
+    text.pose.position.z += 0.10;
+
+    text.scale.z = 0.10;
+
+    text.color.r = 1.0f;
+    text.color.g = 1.0f;
+    text.color.b = 1.0f;
+    text.color.a = 1.0f;
+
+    text.text = std::to_string(entity.id);
+
+    markers.markers.push_back(text);
+  }
+
+  entities_markers_pub_->publish(markers);
 }
 }
