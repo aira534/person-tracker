@@ -7,6 +7,8 @@
 #include "geometry_msgs/msg/transform_stamped.hpp"
 
 #include "rclcpp/rclcpp.hpp"
+#include "person_tracker_interfaces/msg/entity.hpp"
+#include "person_tracker_interfaces/msg/detected_entities.hpp"
 
 namespace person_tracker
 {
@@ -25,6 +27,8 @@ private:
 
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   geometry_msgs::msg::TransformStamped transform_;
+
+  rclcpp::Subscription<person_tracker_interfaces::msg::DetectedEntities>::SharedPtr entities_subscriber_;
 };
 
 }  //  namespace person_tracker

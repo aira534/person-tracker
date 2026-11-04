@@ -9,82 +9,32 @@ namespace person_tracker {
 
 LidarTrackerNode::LidarTrackerNode()
 : Node("detections_tracking_node"),
-  tf_buffer_(),
-  tf_listener_(tf_buffer_),
   new_id(0)
 {
   centers_subscriber_ = create_subscription<geometry_msgs::msg::PoseArray>(
       "/lidar_objects", 10,
       std::bind(&LidarTrackerNode::centers_callback, this, _1));
 
-  entities_pub_ = create_publisher<person_tracker_interfaces::msg::DetectedEntities>("/entities_info", 10);
-  this->declare_parameter<std::string>("fixed_frame", "odom");
-
-  fixed_frame_ = this->get_parameter("fixed_frame").as_string();
+  entities_pub_ = create_publisher<person_tracker_interfaces::msg::DetectedEntities>("/tracked_entities", 10);
 
   this->declare_parameter<int>("max_misses", 10);
   max_misses_ = this->get_parameter("max_misses").as_int();
-  // debug_pub_ = create_publisher<geometry_msgs::msg::PoseArray>(
-  //   "/objects_odom_debug", 10);
-
-  entities_markers_pub_ =
-    this->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "tracked_entities_markers", 10);
 }
 
 void
 LidarTrackerNode::centers_callback(geometry_msgs::msg::PoseArray::SharedPtr msg)
 {
-  tf2::Stamped<tf2::Transform> odom2laser;
-  std::string error;
+  points_odom_.clear();
+  for (const auto & pose : msg->poses) {
+    geometry_msgs::msg::Point p;
 
-  if (tf_buffer_.canTransform(fixed_frame_, msg->header.frame_id, tf2::TimePointZero, &error)) {
-    auto odom2laser_msg = tf_buffer_.lookupTransform(
-      fixed_frame_, msg->header.frame_id, tf2::TimePointZero);
-
-    tf2::fromMsg(odom2laser_msg, odom2laser);
-
-    points_odom_.clear();
-    for (const auto & pose : msg->poses) {
-      tf2::Vector3 p_laser(pose.position.x, pose.position.y, pose.position.z);
-      tf2::Vector3 p_odom = odom2laser * p_laser;
-      geometry_msgs::msg::Point p;
-
-      p.x = p_odom.x();
-      p.y = p_odom.y();
-      p.z = 0;
-      points_odom_.push_back(p);
-    }
+    p.x = pose.position.x;
+    p.y = pose.position.y;
+    p.z = 0;
+    points_odom_.push_back(p);
   }
 
   updateEntities(rclcpp::Time(msg->header.stamp));
-
-  // for (size_t i = 0; i < points_odom_.size(); i++) {
-  //   for (size_t j = i + 1; j < points_odom_.size(); j++) {
-  //     double dx = points_odom_[j].x - points_odom_[i].x;
-  //     double dy = points_odom_[j].y - points_odom_[i].y;
-  //     double dist = sqrt(dx *dx + dy * dy);
-
-  //     if (dist < 0.8) {
-  //       RCLCPP_INFO(
-  //         get_logger(), "Puntos %zu y %zu: distancia %.3f m",
-  //         i, j, dist);
-  //     }
-  //   }
-  // }
-
-  // geometry_msgs::msg::PoseArray dbg;
-  // dbg.header.stamp = msg->header.stamp;
-  // dbg.header.frame_id = fixed_frame_;
-
-  // for (const auto & pt : points_odom_) {
-  //   geometry_msgs::msg::Pose pose;
-  //   pose.position = pt;
-  //   pose.orientation.w = 1.0;
-  //   dbg.poses.push_back(pose);
-  // }
-
-  // debug_pub_->publish(dbg);
 }
 
 void LidarTrackerNode::updateEntities(const rclcpp::Time & stamp)
@@ -167,75 +117,28 @@ void LidarTrackerNode::updateEntities(const rclcpp::Time & stamp)
   publishEntities(stamp);
 }
 
-//debug
-
+// puts actual struct into ros message and publishes it
 void LidarTrackerNode::publishEntities(const rclcpp::Time & stamp)
 {
-  using Marker = visualization_msgs::msg::Marker;
+  person_tracker_interfaces::msg::DetectedEntities entities_msg;
+  entities_msg.header.stamp = stamp;
+  entities_msg.header.frame_id = "odom";
+  entities_msg.entities.reserve(entities_.size());
 
-  visualization_msgs::msg::MarkerArray markers;
-  markers.markers.reserve(1 + 2 * entities_.size());
-
-  // Limpiar la visualización anterior.
-  Marker clear;
-  clear.header.frame_id = "odom";
-  clear.header.stamp = stamp;
-  clear.action = Marker::DELETEALL;
-  markers.markers.push_back(clear);
-
-  for (const Entity & entity : entities_)
+  for (const auto & e : entities_)
   {
-    // Esfera en la posición del cluster.
-    Marker sphere;
-    sphere.header.frame_id = "odom";
-    sphere.header.stamp = stamp;
+    person_tracker_interfaces::msg::Entity entity_msg;
+    entity_msg.id = e.id;
+    entity_msg.position = e.position;
+    entity_msg.velocity.x = e.vx;
+    entity_msg.velocity.y = e.vy;
+    entity_msg.velocity.z = 0.0;
+    entity_msg.misses = e.misses;
+    entity_msg.last_seen = e.last_seen;
 
-    sphere.ns = "entity_positions";
-    sphere.id = static_cast<std::int32_t>(entity.id);
-    sphere.type = Marker::SPHERE;
-    sphere.action = Marker::ADD;
-
-    sphere.pose.position = entity.position;
-    sphere.pose.orientation.w = 1.0;
-
-    sphere.scale.x = 0.12;
-    sphere.scale.y = 0.12;
-    sphere.scale.z = 0.12;
-
-    // Verde: asociada en este escaneo.
-    // Naranja: conservada, pero con detecciones perdidas.
-    sphere.color.r = entity.misses == 0 ? 0.1f : 1.0f;
-    sphere.color.g = entity.misses == 0 ? 1.0f : 0.5f;
-    sphere.color.b = 0.1f;
-    sphere.color.a = 1.0f;
-
-    markers.markers.push_back(sphere);
-
-    // Texto encima de la esfera.
-    Marker text;
-    text.header = sphere.header;
-
-    text.ns = "entity_ids";
-    text.id = static_cast<std::int32_t>(entity.id);
-    text.type = Marker::TEXT_VIEW_FACING;
-    text.action = Marker::ADD;
-
-    text.pose = sphere.pose;
-    text.pose.position.x += 0.10;
-    text.pose.position.z += 0.10;
-
-    text.scale.z = 0.10;
-
-    text.color.r = 1.0f;
-    text.color.g = 1.0f;
-    text.color.b = 1.0f;
-    text.color.a = 1.0f;
-
-    text.text = std::to_string(entity.id);
-
-    markers.markers.push_back(text);
+    entities_msg.entities.push_back(entity_msg);
   }
 
-  entities_markers_pub_->publish(markers);
+  entities_pub_->publish(entities_msg);
 }
 }

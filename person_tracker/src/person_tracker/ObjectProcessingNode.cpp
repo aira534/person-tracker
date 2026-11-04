@@ -8,7 +8,9 @@ using std::placeholders::_1;
 namespace person_tracker {
 
 ObjectProcessingNode::ObjectProcessingNode()
-: Node("object_processing_node") {
+: Node("object_processing_node"),
+  tf_buffer_(),
+  tf_listener_(tf_buffer_) {
   laser_subscriber_ = create_subscription<sensor_msgs::msg::LaserScan>(
       "scan_filtered", 10,
       std::bind(&ObjectProcessingNode::laser_callback, this, _1));
@@ -18,10 +20,12 @@ ObjectProcessingNode::ObjectProcessingNode()
   this->declare_parameter<double>("max_dist", 0.50);
   this->declare_parameter<double>("min_obj_size", 0.05);
   this->declare_parameter<double>("max_obj_size", 1.00);
+  this->declare_parameter<std::string>("fixed_frame", "odom");
 
   MAX_DIST_ = this->get_parameter("max_dist").as_double();
   MIN_OBJ_SIZE_ = this->get_parameter("min_obj_size").as_double();
   MAX_OBJ_SIZE_ = this->get_parameter("max_obj_size").as_double();
+  fixed_frame_ = this->get_parameter("fixed_frame").as_string();
 }
 
 void
@@ -76,7 +80,8 @@ ObjectProcessingNode::laser_callback(sensor_msgs::msg::LaserScan::SharedPtr msg)
   }
 
   calc_object_center(current_object, objects_pos, MIN_OBJ_SIZE_, MAX_OBJ_SIZE_);
-  objects_pub_->publish(objects_pos);
+  to_odom(objects_pos);
+  objects_pub_->publish(object_positions_odom_);
 }
 
 
@@ -108,6 +113,38 @@ ObjectProcessingNode::calc_object_center(const std::vector<geometry_msgs::msg::P
       center_pose.orientation.w = 1.0;
 
       detections_centers.poses.push_back(center_pose);
+  }
+}
+
+// transform all the centers to odom
+void
+ObjectProcessingNode::to_odom(geometry_msgs::msg::PoseArray & detections_centers)
+{
+  object_positions_odom_.poses.clear();
+  object_positions_odom_.header = detections_centers.header;
+  object_positions_odom_.header.frame_id = fixed_frame_;  // "odom"
+
+  tf2::Stamped<tf2::Transform> odom2laser;
+  std::string error;
+
+  if (tf_buffer_.canTransform(fixed_frame_, detections_centers.header.frame_id, tf2::TimePointZero, &error))
+  {
+    auto odom2laser_msg = tf_buffer_.lookupTransform(fixed_frame_, detections_centers.header.frame_id, tf2::TimePointZero);
+
+    tf2::fromMsg(odom2laser_msg, odom2laser);
+
+    for (const auto & pose : detections_centers.poses) {
+      tf2::Vector3 p_laser(pose.position.x, pose.position.y, pose.position.z);
+      tf2::Vector3 p_odom = odom2laser * p_laser;
+
+      geometry_msgs::msg::Pose pose_odom;
+      pose_odom.position.x = p_odom.x();
+      pose_odom.position.y = p_odom.y();
+      pose_odom.position.z = p_odom.z();
+      pose_odom.orientation = pose.orientation;
+
+      object_positions_odom_.poses.push_back(pose_odom);
+    }
   }
 }
 

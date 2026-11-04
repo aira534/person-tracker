@@ -5,6 +5,7 @@
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "person_tracker_interfaces/msg/detected_entities.hpp"
+#include "person_tracker_interfaces/msg/entity.hpp"
 #include "tf2_ros/transform_listener.h"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
@@ -28,11 +29,7 @@ public:
 private:
   rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr centers_subscriber_;
   rclcpp::Publisher<person_tracker_interfaces::msg::DetectedEntities>::SharedPtr entities_pub_;
-  tf2::BufferCore tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
-  std::string fixed_frame_;
   std::vector<geometry_msgs::msg::Point> points_odom_;
-  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr debug_pub_;
 
   // for every entity that is detected by the lidar
   struct Entity

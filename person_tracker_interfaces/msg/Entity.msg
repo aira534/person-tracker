@@ -1,5 +1,5 @@
 int32 id
 geometry_msgs/Point position
-geometry_msgs/Vector3 direction_vector
-bool is_person
-int32 unseen_frames
+geometry_msgs/Vector3 velocity
+int32 misses
+builtin_interfaces/Time last_seen
