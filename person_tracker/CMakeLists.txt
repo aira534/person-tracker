@@ -18,6 +18,8 @@ find_package(laser_geometry REQUIRED)
 find_package(person_tracker_interfaces REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(depth_image_proc REQUIRED)
+find_package(cv_bridge REQUIRED)
 
 set(dependencies
     rclcpp
@@ -32,6 +34,8 @@ set(dependencies
     laser_geometry
     person_tracker_interfaces
     visualization_msgs
+    depth_image_proc
+    cv_bridge
 )
 
 install(DIRECTORY config launch
@@ -49,6 +53,7 @@ add_library(${PROJECT_NAME} SHARED
   src/person_tracker/ObjectProcessingNode.cpp
   src/person_tracker/LidarTrackerNode.cpp
   src/person_tracker/TrackerDebugNode.cpp
+  src/person_tracker/DetectionTo3DfromDepthNode.cpp
 )
 ament_target_dependencies(${PROJECT_NAME} ${dependencies})
 
@@ -68,12 +73,17 @@ add_executable(tracker_debug_main src/tracker_debug_main.cpp)
 ament_target_dependencies(tracker_debug_main ${dependencies})
 target_link_libraries(tracker_debug_main ${PROJECT_NAME})
 
+add_executable(detection_2d_to_3d_depth_main src/detection_2d_to_3d_depth_main.cpp)
+ament_target_dependencies(detection_2d_to_3d_depth_main ${dependencies})
+target_link_libraries(detection_2d_to_3d_depth_main ${PROJECT_NAME})
+
 install(TARGETS
   ${PROJECT_NAME}
   person_tracker_main
   object_processing_main
   lidar_tracker_main
   tracker_debug_main
+  detection_2d_to_3d_depth_main
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 

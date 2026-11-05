@@ -12,6 +12,11 @@ TrackerDebugNode::TrackerDebugNode()
 
   markers_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
     "tracked_entities_markers", 10);
+
+  camera_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("/debug/camera_detections", 10);
+
+  camera_detections_sub_ = create_subscription<vision_msgs::msg::Detection3DArray>("/detection_3d", 10, std::bind(
+    &TrackerDebugNode::camera_detections_callback, this, std::placeholders::_1));
 }
 
 void TrackerDebugNode::entitiesCallback(const person_tracker_interfaces::msg::DetectedEntities::SharedPtr msg)
@@ -76,6 +81,43 @@ void TrackerDebugNode::entitiesCallback(const person_tracker_interfaces::msg::De
   }
 
   markers_pub_->publish(markers);
+}
+
+void
+TrackerDebugNode::camera_detections_callback(vision_msgs::msg::Detection3DArray::ConstSharedPtr msg)
+{
+  visualization_msgs::msg::MarkerArray markers;
+
+  visualization_msgs::msg::Marker clear;
+  clear.action = visualization_msgs::msg::Marker::DELETEALL;
+  markers.markers.push_back(clear);
+
+  int id = 0;
+
+  for (const auto & detection : msg->detections) {
+    visualization_msgs::msg::Marker marker;
+    marker.header = msg->header;
+    marker.ns = "camera_detections";
+    marker.id = id++;
+    marker.type = visualization_msgs::msg::Marker::SPHERE;
+    marker.action = visualization_msgs::msg::Marker::ADD;
+
+    marker.pose.position = detection.bbox.center.position;
+    marker.pose.orientation.w = 1.0;
+
+    marker.scale.x = 0.2;
+    marker.scale.y = 0.2;
+    marker.scale.z = 0.2;
+
+    marker.color.r = 0.0;
+    marker.color.g = 1.0;
+    marker.color.b = 0.0;
+    marker.color.a = 1.0;
+
+    markers.markers.push_back(marker);
+  }
+
+  camera_markers_pub_->publish(markers);
 }
 
 }  // namespace person_tracker

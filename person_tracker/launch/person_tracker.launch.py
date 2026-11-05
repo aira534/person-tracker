@@ -88,6 +88,19 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('debug'))
     )
 
+    convert_2d_3d = Node(
+        package='person_tracker',
+        executable='detection_2d_to_3d_depth_main',
+        output='screen',
+        parameters=[config_file, {'use_sim_time': True}],
+        remappings=[
+            ('input_depth', '/stereo/depth'),
+            ('input_detection_2d', '/yolo/detections'),
+            ('camera_info', '/color/camera_info'),
+            ('output_detection_3d', 'detection_3d'),
+        ]
+    )
+
 
     return LaunchDescription([
       debug_arg,
@@ -98,5 +111,6 @@ def generate_launch_description():
       yolo_launch,
       object_processing_node,
       lidar_tracker_node,
-      debug_node
+      debug_node,
+      convert_2d_3d
   ])
