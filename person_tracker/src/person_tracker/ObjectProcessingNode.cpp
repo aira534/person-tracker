@@ -124,24 +124,23 @@ ObjectProcessingNode::to_odom(geometry_msgs::msg::PoseArray & detections_centers
   object_positions_odom_.header = detections_centers.header;
   object_positions_odom_.header.frame_id = fixed_frame_;  // "odom"
 
-  tf2::Stamped<tf2::Transform> odom2laser;
+  tf2::Stamped<tf2::Transform> laser2odom;
   std::string error;
 
   if (tf_buffer_.canTransform(fixed_frame_, detections_centers.header.frame_id, tf2::TimePointZero, &error))
   {
-    auto odom2laser_msg = tf_buffer_.lookupTransform(fixed_frame_, detections_centers.header.frame_id, tf2::TimePointZero);
+    auto laser2odom_msg = tf_buffer_.lookupTransform(fixed_frame_, detections_centers.header.frame_id, tf2::TimePointZero);
 
-    tf2::fromMsg(odom2laser_msg, odom2laser);
+    tf2::fromMsg(laser2odom_msg, laser2odom);
 
     for (const auto & pose : detections_centers.poses) {
-      tf2::Vector3 p_laser(pose.position.x, pose.position.y, pose.position.z);
-      tf2::Vector3 p_odom = odom2laser * p_laser;
+      tf2::Transform pose_laser;
+      tf2::fromMsg(pose, pose_laser);
+
+      tf2::Transform pose_odom_tf = laser2odom * pose_laser;
 
       geometry_msgs::msg::Pose pose_odom;
-      pose_odom.position.x = p_odom.x();
-      pose_odom.position.y = p_odom.y();
-      pose_odom.position.z = p_odom.z();
-      pose_odom.orientation = pose.orientation;
+      tf2::toMsg(pose_odom_tf, pose_odom);
 
       object_positions_odom_.poses.push_back(pose_odom);
     }

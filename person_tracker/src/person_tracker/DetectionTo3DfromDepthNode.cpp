@@ -31,7 +31,9 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 
 DetectionTo3DfromDepthNode::DetectionTo3DfromDepthNode()
-: Node("detection_to_3d_from_depth_node")
+: Node("detection_to_3d_from_depth_node"),
+  tf_buffer_(),
+  tf_listener_(tf_buffer_)
 {
   depth_sub_ = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::Image>>(
     this, "input_depth", rclcpp::SensorDataQoS().reliable().get_rmw_qos_profile());
@@ -46,6 +48,12 @@ DetectionTo3DfromDepthNode::DetectionTo3DfromDepthNode()
     "camera_info", 1, std::bind(&DetectionTo3DfromDepthNode::callback_info, this, _1));
   detection_pub_ = create_publisher<vision_msgs::msg::Detection3DArray>(
     "output_detection_3d", rclcpp::SensorDataQoS().reliable());
+
+  detection_odom_pub_ = create_publisher<vision_msgs::msg::Detection3DArray>(
+    "/detections_3d_odom", rclcpp::SensorDataQoS().reliable());
+
+  this->declare_parameter<std::string>("fixed_frame", "odom");
+  fixed_frame_ = this->get_parameter("fixed_frame").as_string();
 }
 
 void
@@ -74,7 +82,7 @@ DetectionTo3DfromDepthNode::callback_sync(
     return;
   }
 
-  if (detection_pub_->get_subscription_count() > 0) {
+  if (  detection_pub_->get_subscription_count() > 0 || detection_odom_pub_->get_subscription_count() > 0) {
     vision_msgs::msg::Detection3DArray detections_3d_msg;
     detections_3d_msg.header = detection_msg->header;
 
@@ -120,7 +128,45 @@ DetectionTo3DfromDepthNode::callback_sync(
 
     if (!detections_3d_msg.detections.empty()) {
       detection_pub_->publish(detections_3d_msg);
+      to_odom(detections_3d_msg);
     }
+  }
+}
+
+void
+DetectionTo3DfromDepthNode::to_odom(vision_msgs::msg::Detection3DArray & detections_3d)
+{
+  detections_3d_odom_.header = detections_3d.header;
+  detections_3d_odom_.header.frame_id = fixed_frame_;
+  detections_3d_odom_.detections.clear();
+
+  tf2::Stamped<tf2::Transform> camera2odom;
+  std::string error;
+
+  if (tf_buffer_.canTransform(fixed_frame_, detections_3d.header.frame_id, tf2::TimePointZero, &error))
+  {
+    auto camera2odom_msg = tf_buffer_.lookupTransform(fixed_frame_, detections_3d.header.frame_id, tf2::TimePointZero);
+
+    tf2::fromMsg(camera2odom_msg, camera2odom);
+
+    for (const auto & detection : detections_3d.detections) {
+      tf2::Transform pose_camera;
+      tf2::fromMsg(detection.bbox.center, pose_camera);
+
+      tf2::Transform pose_odom = camera2odom * pose_camera;
+
+      vision_msgs::msg::Detection3D detection_odom;
+
+      detection_odom.header = detection.header;
+      detection_odom.results = detection.results;
+      detection_odom.header.frame_id = fixed_frame_;  // "odom"
+
+      tf2::toMsg(pose_odom, detection_odom.bbox.center);
+
+      detections_3d_odom_.detections.push_back(detection_odom);
+    }
+
+    detection_odom_pub_->publish(detections_3d_odom_);
   }
 }
 
