@@ -11,7 +11,7 @@ TrackerDebugNode::TrackerDebugNode()
     std::bind(&TrackerDebugNode::entitiesCallback, this, std::placeholders::_1));
 
   markers_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "tracked_entities_markers", 10);
+    "/debug/tracked_entities_markers", 10);
 
   camera_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("/debug/camera_detections", 10);
 
