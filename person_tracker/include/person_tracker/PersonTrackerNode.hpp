@@ -10,8 +10,6 @@
 #include "person_tracker_interfaces/msg/entity.hpp"
 #include "person_tracker_interfaces/msg/detected_entities.hpp"
 
-#include "message_filters/sync_policies/approximate_time.h"
-#include "message_filters/subscriber.h"
 #include "vision_msgs/msg/detection3_d_array.hpp"
 
 namespace person_tracker
@@ -22,17 +20,11 @@ class PersonTrackerNode : public rclcpp::Node
 public:
   PersonTrackerNode();
 
+  void people_callback(vision_msgs::msg::Detection3DArray::SharedPtr people);
+
 private:
-  void callback_sync(
-    const person_tracker_interfaces::msg::DetectedEntities::ConstSharedPtr & lidar_detections,
-    const vision_msgs::msg::Detection3DArray::ConstSharedPtr & yolo_detections);
-
-  typedef message_filters::sync_policies::ApproximateTime<
-      person_tracker_interfaces::msg::DetectedEntities, vision_msgs::msg::Detection3DArray> MySyncPolicy;
-
-  std::shared_ptr<message_filters::Subscriber<person_tracker_interfaces::msg::DetectedEntities>> entities_subscriber_;
-  std::shared_ptr<message_filters::Subscriber<vision_msgs::msg::Detection3DArray>> yolo_detections3d_subscriber_;
-  std::shared_ptr<message_filters::Synchronizer<MySyncPolicy>> sync_;
+  rclcpp::Publisher<person_tracker_interfaces::msg::DetectedEntities>::SharedPtr entities_pub_;
+  rclcpp::Subscription<vision_msgs::msg::Detection3DArray>::SharedPtr yolo_detections3d_subscriber_;
 };
 
 }  //  namespace person_tracker

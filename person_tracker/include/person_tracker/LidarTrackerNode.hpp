@@ -25,33 +25,17 @@ public:
   LidarTrackerNode();
   void centers_callback(const geometry_msgs::msg::PoseArray::SharedPtr msg);
   void updateEntities(const rclcpp::Time & stamp);
+  void entities_callback(person_tracker_interfaces::msg::DetectedEntities::SharedPtr entities);
 
 private:
   rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr centers_subscriber_;
-  rclcpp::Publisher<person_tracker_interfaces::msg::DetectedEntities>::SharedPtr entities_pub_;
+  rclcpp::Publisher<person_tracker_interfaces::msg::DetectedEntities>::SharedPtr assoc_entities_pub_;
   std::vector<geometry_msgs::msg::Point> points_odom_;
+  rclcpp::Subscription<person_tracker_interfaces::msg::DetectedEntities>::SharedPtr entities_sub_;
 
-  // for every entity that is detected by the lidar
-  struct Entity
-  {
-    int id = -1;
-    geometry_msgs::msg::Point position;
+  person_tracker_interfaces::msg::DetectedEntities entities_;
 
-    // direction vector
-    double vx = 0.0;
-    double vy = 0.0;
-
-    // for aging
-    rclcpp::Time last_seen{0, 0, RCL_ROS_TIME};
-    int misses = 0;
-  };
-
-  std::vector<Entity> entities_;
-  int new_id;
   int max_misses_;
-
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
-    entities_markers_pub_;
 
   void publishEntities(const rclcpp::Time & stamp);
 };

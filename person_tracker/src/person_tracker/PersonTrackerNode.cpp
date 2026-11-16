@@ -7,20 +7,13 @@ using std::placeholders::_2;
 
 PersonTrackerNode::PersonTrackerNode()
 : Node("sensor_fusion") {
-  entities_subscriber_ = std::make_shared<message_filters::Subscriber<person_tracker_interfaces::msg::DetectedEntities>>(
-    this, "/tracked_entities", rclcpp::SensorDataQoS().reliable().get_rmw_qos_profile());
-  yolo_detections3d_subscriber_ =
-    std::make_shared<message_filters::Subscriber<vision_msgs::msg::Detection3DArray>>(
-    this, "/detections_3d_odom", rclcpp::SensorDataQoS().reliable().get_rmw_qos_profile());
-  sync_ = std::make_shared<message_filters::Synchronizer<MySyncPolicy>>(
-    MySyncPolicy(10), *entities_subscriber_, *yolo_detections3d_subscriber_);
-  sync_->registerCallback(std::bind(&PersonTrackerNode::callback_sync, this, _1, _2));
+  entities_pub_ = create_publisher<person_tracker_interfaces::msg::DetectedEntities>("/tracked_entities", 10);
+  yolo_detections3d_subscriber_ = create_subscription<vision_msgs::msg::Detection3DArray>(
+      "/lidar_objects", 10,
+      std::bind(&PersonTrackerNode::people_callback, this, _1));
 }
 
-void PersonTrackerNode::callback_sync(
-  const person_tracker_interfaces::msg::DetectedEntities::ConstSharedPtr & lidar_detections,
-  const vision_msgs::msg::Detection3DArray::ConstSharedPtr & yolo_detections)
-{
+void PersonTrackerNode::people_callback(vision_msgs::msg::Detection3DArray::SharedPtr people) {
   void();
 }
 

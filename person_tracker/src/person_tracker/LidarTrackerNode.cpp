@@ -15,7 +15,11 @@ LidarTrackerNode::LidarTrackerNode()
       "/lidar_objects", 10,
       std::bind(&LidarTrackerNode::centers_callback, this, _1));
 
-  entities_pub_ = create_publisher<person_tracker_interfaces::msg::DetectedEntities>("/tracked_entities", 10);
+  entities_sub_ = create_subscription<person_tracker_interfaces::msg::DetectedEntities>(
+      "/tracked_entities", 10,
+      std::bind(&LidarTrackerNode::entities_callback, this, _1));
+
+  assoc_entities_pub_ = create_publisher<person_tracker_interfaces::msg::DetectedEntities>("/assoc_entities", 10);
 
   this->declare_parameter<int>("max_misses", 10);
   max_misses_ = this->get_parameter("max_misses").as_int();
@@ -35,6 +39,11 @@ LidarTrackerNode::centers_callback(geometry_msgs::msg::PoseArray::SharedPtr msg)
   }
 
   updateEntities(rclcpp::Time(msg->header.stamp));
+}
+
+void
+LidarTrackerNode::entities_callback(person_tracker_interfaces::msg::DetectedEntities::SharedPtr entities) {
+  void();
 }
 
 void LidarTrackerNode::updateEntities(const rclcpp::Time & stamp)
@@ -89,20 +98,6 @@ void LidarTrackerNode::updateEntities(const rclcpp::Time & stamp)
     }
   }
 
-  for (std::size_t i = 0; i < detection_associated.size(); i++) {
-    if (!detection_associated[i]) {
-      Entity new_entity;
-      new_entity.id = ++new_id;
-      new_entity.last_seen = stamp;
-      new_entity.misses = 0;
-      new_entity.position = points_odom_[i];
-      new_entity.vx = 0.0;
-      new_entity.vy = 0.0;
-
-      entities_.push_back(new_entity);
-    }
-  }
-
   for (auto it = entities_.begin(); it != entities_.end(); )
   {
     if (it->misses >= max_misses_)
@@ -139,6 +134,6 @@ void LidarTrackerNode::publishEntities(const rclcpp::Time & stamp)
     entities_msg.entities.push_back(entity_msg);
   }
 
-  entities_pub_->publish(entities_msg);
+  assoc_entities_pub_->publish(entities_msg);
 }
 }
