@@ -70,10 +70,10 @@ def generate_launch_description():
     )
 
 
-    lidar_tracker_node = Node(
+    person_tracker_node = Node(
         package='person_tracker',
-        executable='lidar_tracker_main',
-        name='detections_tracking_node',
+        executable='person_tracker_main',
+        name='person_tracker_node',
         parameters=[config_file, {'use_sim_time': True}],
         output='screen'
     )
@@ -110,7 +110,7 @@ def generate_launch_description():
       with_reid_arg,
       yolo_launch,
       object_processing_node,
-      lidar_tracker_node,
+      person_tracker_node,
       debug_node,
       convert_2d_3d
   ])

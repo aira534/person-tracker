@@ -51,7 +51,6 @@ include_directories(include)
 add_library(${PROJECT_NAME} SHARED
   src/person_tracker/PersonTrackerNode.cpp
   src/person_tracker/ObjectProcessingNode.cpp
-  src/person_tracker/LidarTrackerNode.cpp
   src/person_tracker/TrackerDebugNode.cpp
   src/person_tracker/DetectionTo3DfromDepthNode.cpp
 )
@@ -65,9 +64,6 @@ add_executable(object_processing_main src/object_processing_main.cpp)
 ament_target_dependencies(object_processing_main ${dependencies})
 target_link_libraries(object_processing_main ${PROJECT_NAME})
 
-add_executable(lidar_tracker_main src/lidar_tracker_main.cpp)
-ament_target_dependencies(lidar_tracker_main ${dependencies})
-target_link_libraries(lidar_tracker_main ${PROJECT_NAME})
 
 add_executable(tracker_debug_main src/tracker_debug_main.cpp)
 ament_target_dependencies(tracker_debug_main ${dependencies})
@@ -81,7 +77,6 @@ install(TARGETS
   ${PROJECT_NAME}
   person_tracker_main
   object_processing_main
-  lidar_tracker_main
   tracker_debug_main
   detection_2d_to_3d_depth_main
   RUNTIME DESTINATION lib/${PROJECT_NAME}

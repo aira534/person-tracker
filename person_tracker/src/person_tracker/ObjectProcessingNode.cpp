@@ -9,7 +9,7 @@ namespace person_tracker {
 
 ObjectProcessingNode::ObjectProcessingNode()
 : Node("object_processing_node"),
-  tf_buffer_(),
+  tf_buffer_(get_clock()),
   tf_listener_(tf_buffer_) {
   laser_subscriber_ = create_subscription<sensor_msgs::msg::LaserScan>(
       "scan_filtered", 10,
@@ -127,9 +127,12 @@ ObjectProcessingNode::to_odom(geometry_msgs::msg::PoseArray & detections_centers
   tf2::Stamped<tf2::Transform> laser2odom;
   std::string error;
 
-  if (tf_buffer_.canTransform(fixed_frame_, detections_centers.header.frame_id, tf2::TimePointZero, &error))
+  const rclcpp::Time stamp(detections_centers.header.stamp);
+  const auto timeout = rclcpp::Duration::from_seconds(0.05);
+
+  if (tf_buffer_.canTransform(fixed_frame_, detections_centers.header.frame_id, stamp, timeout, &error))
   {
-    auto laser2odom_msg = tf_buffer_.lookupTransform(fixed_frame_, detections_centers.header.frame_id, tf2::TimePointZero);
+    auto laser2odom_msg = tf_buffer_.lookupTransform(fixed_frame_, detections_centers.header.frame_id, stamp);
 
     tf2::fromMsg(laser2odom_msg, laser2odom);
 
@@ -144,7 +147,9 @@ ObjectProcessingNode::to_odom(geometry_msgs::msg::PoseArray & detections_centers
 
       object_positions_odom_.poses.push_back(pose_odom);
     }
+  } else {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000, "No TF to %s: %s", fixed_frame_.c_str(), error.c_str());
   }
 }
 
-}
+}   // namespace person_tracker

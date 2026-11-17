@@ -32,7 +32,7 @@ using std::placeholders::_2;
 
 DetectionTo3DfromDepthNode::DetectionTo3DfromDepthNode()
 : Node("detection_to_3d_from_depth_node"),
-  tf_buffer_(),
+  tf_buffer_(get_clock()),
   tf_listener_(tf_buffer_)
 {
   depth_sub_ = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::Image>>(
@@ -107,7 +107,8 @@ DetectionTo3DfromDepthNode::callback_sync(
           cv::Point2d(detection.bbox.center.position.x, detection.bbox.center.position.y));
       }
 
-      if (std::isnan(depth)) {
+      // invalid depth: NaN, 0 (pixel without depth data) or too far
+      if (std::isnan(depth) || depth <= 0.0 || depth > 8.0) {
         continue;
       }
 
@@ -143,9 +144,12 @@ DetectionTo3DfromDepthNode::to_odom(vision_msgs::msg::Detection3DArray & detecti
   tf2::Stamped<tf2::Transform> camera2odom;
   std::string error;
 
-  if (tf_buffer_.canTransform(fixed_frame_, detections_3d.header.frame_id, tf2::TimePointZero, &error))
+  const rclcpp::Time stamp(detections_3d.header.stamp);
+  const auto timeout = rclcpp::Duration::from_seconds(0.05);
+
+  if (tf_buffer_.canTransform(fixed_frame_, detections_3d.header.frame_id, stamp, timeout, &error))
   {
-    auto camera2odom_msg = tf_buffer_.lookupTransform(fixed_frame_, detections_3d.header.frame_id, tf2::TimePointZero);
+    auto camera2odom_msg = tf_buffer_.lookupTransform(fixed_frame_, detections_3d.header.frame_id, stamp);
 
     tf2::fromMsg(camera2odom_msg, camera2odom);
 
@@ -167,6 +171,8 @@ DetectionTo3DfromDepthNode::to_odom(vision_msgs::msg::Detection3DArray & detecti
     }
 
     detection_odom_pub_->publish(detections_3d_odom_);
+  } else {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000, "No TF to %s: %s", fixed_frame_.c_str(), error.c_str());
   }
 }
 

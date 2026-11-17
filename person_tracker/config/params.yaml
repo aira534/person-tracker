@@ -1,10 +1,10 @@
 object_processing_node:
   ros__parameters:
-    max_dist: 0.50
+    max_dist: 0.30
     min_obj_size: 0.05
     max_obj_size: 1.00
 
-detections_tracking_node:
+person_tracker_node:
   ros__parameters:
     fixed_frame: odom
-    max_misses: 5
+    max_misses: 8

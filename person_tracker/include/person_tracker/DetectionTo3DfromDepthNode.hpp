@@ -16,6 +16,7 @@
 #include "rclcpp/rclcpp.hpp"
 
 // for tf
+#include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2/transform_datatypes.h"
@@ -52,7 +53,7 @@ private:
 
   std::string fixed_frame_;
 
-  tf2::BufferCore tf_buffer_;
+  tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 };
 
